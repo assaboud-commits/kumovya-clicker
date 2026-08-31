@@ -1,6 +1,7 @@
 'use client';
 
-import { PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { initializeTelegram } from './telegram';
 
 type Upgrade = {
   id: string;
@@ -137,6 +138,7 @@ function priceFor(base: number, count: number) {
 export default function Home() {
   const [game, setGame] = useState<SaveState>(defaultState);
   const [ready, setReady] = useState(false);
+  const [saveUnavailable, setSaveUnavailable] = useState(false);
   const [floats, setFloats] = useState<FloatHit[]>([]);
   const [pressed, setPressed] = useState(false);
   const [notice, setNotice] = useState<{ label: string; title: string; bonus: number } | null>(null);
@@ -162,22 +164,32 @@ export default function Home() {
       if (stored) {
         const parsed = JSON.parse(stored) as Partial<SaveState>;
         setGame({
-          authority: Number(parsed.authority) || 0,
-          lifetime: Number(parsed.lifetime) || 0,
-          owned: Array.isArray(parsed.owned) && parsed.owned.length === upgrades.length ? parsed.owned.map((value) => Number(value) || 0) : defaultState.owned,
-          sound: parsed.sound ?? true,
+          authority: Number.isFinite(parsed.authority) ? Math.max(0, Number(parsed.authority)) : 0,
+          lifetime: Number.isFinite(parsed.lifetime) ? Math.max(0, Number(parsed.lifetime)) : 0,
+          owned: Array.isArray(parsed.owned) && parsed.owned.length === upgrades.length ? parsed.owned.map((value) => Number.isSafeInteger(value) && value >= 0 ? value : 0) : defaultState.owned,
+          sound: typeof parsed.sound === 'boolean' ? parsed.sound : true,
           selected: Number.isInteger(parsed.selected) && Number(parsed.selected) >= 0 && Number(parsed.selected) < characters.length ? Number(parsed.selected) : 0,
         });
       }
     } catch {
-      localStorage.removeItem('kumovya-save-v1');
+      // Some embedded browsers deny storage; keep the game playable in memory.
     }
     setReady(true);
   }, []);
 
   useEffect(() => {
-    if (ready) localStorage.setItem('kumovya-save-v1', JSON.stringify(game));
+    if (!ready) return;
+    try {
+      localStorage.setItem('kumovya-save-v1', JSON.stringify(game));
+      setSaveUnavailable(false);
+    } catch {
+      setSaveUnavailable(true);
+    }
   }, [game, ready]);
+
+  useEffect(() => {
+    if (ready) initializeTelegram(window.Telegram?.WebApp);
+  }, [ready]);
 
   useEffect(() => {
     if (!passive) return;
@@ -210,13 +222,14 @@ export default function Home() {
     }
   }
 
-  function handleClick(event: PointerEvent<HTMLButtonElement>) {
+  function handleClick(event: MouseEvent<HTMLButtonElement>) {
+    if (!ready) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const id = ++hitId.current;
     characterClicks.current += 1;
     const isToast = activeCharacter.id === 'viktoria' && characterClicks.current % 12 === 0;
     const hitValue = isToast ? clickPower * 8 : clickPower;
-    setFloats((current) => [...current.slice(-7), { id, x: event.clientX - rect.left, y: event.clientY - rect.top, value: hitValue }]);
+    setFloats((current) => [...current.slice(-7), { id, x: event.detail === 0 ? rect.width / 2 : event.clientX - rect.left, y: event.detail === 0 ? rect.height / 2 : event.clientY - rect.top, value: hitValue }]);
     window.setTimeout(() => setFloats((current) => current.filter((item) => item.id !== id)), 800);
     setPressed(true);
     window.setTimeout(() => setPressed(false), 95);
@@ -238,9 +251,13 @@ export default function Home() {
   }
 
   function buy(index: number) {
-    const cost = Math.floor(priceFor(upgrades[index].baseCost, game.owned[index]) * activeCharacter.priceMultiplier);
-    if (game.authority < cost) return;
-    setGame((current) => ({ ...current, authority: current.authority - cost, owned: current.owned.map((count, itemIndex) => itemIndex === index ? count + 1 : count) }));
+    if (!ready) return;
+    setGame((current) => {
+      const character = characters[current.selected] ?? characters[0];
+      const cost = Math.floor(priceFor(upgrades[index].baseCost, current.owned[index]) * character.priceMultiplier);
+      if (current.authority < cost) return current;
+      return { ...current, authority: current.authority - cost, owned: current.owned.map((count, itemIndex) => itemIndex === index ? count + 1 : count) };
+    });
   }
 
   return (
@@ -275,7 +292,7 @@ export default function Home() {
           <div className="character-stage">
             <div className="character-title"><strong>{activeCharacter.name}</strong><span>{activeCharacter.role}</span></div>
             <div className="bad-stamp" aria-hidden="true">СВОЙ<br />ЧЕЛОВЕК</div>
-            <button type="button" className={`character-button${pressed ? ' is-pressed' : ''}`} onPointerDown={handleClick} aria-label={`Нажать на персонажа ${activeCharacter.name} и получить ${clickPower} авторитета`}>
+            <button type="button" className={`character-button${pressed ? ' is-pressed' : ''}`} onClick={handleClick} disabled={!ready} aria-label={`Нажать на персонажа ${activeCharacter.name} и получить ${clickPower} авторитета`}>
               <img src={activeCharacter.image} alt={`${activeCharacter.name} — ${activeCharacter.role}`} draggable={false} />
               {floats.map((item) => <span className="float-hit" key={item.id} style={{ left: item.x, top: item.y }}>+{formatNumber(item.value)}</span>)}
             </button>
@@ -351,6 +368,7 @@ export default function Home() {
         </aside>
       </section>
 
+      <p className="save-status" role="status">{saveUnavailable ? 'Сохранение недоступно: прогресс останется только до закрытия игры.' : 'Прогресс сохраняется на этом устройстве. На другом устройстве будет отдельная игра.'}</p>
       {notice && <div className="event-toast" role="status" aria-live="polite"><span>{notice.label}</span><strong>{notice.title}</strong><p>Авторитет +{formatNumber(notice.bonus)}</p></div>}
     </main>
   );
