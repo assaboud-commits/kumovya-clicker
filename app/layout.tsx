@@ -8,11 +8,11 @@ const socialImageUrl = new URL('og.png', siteUrl).href;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'Кумовья — район решает',
-  description: 'Три района, десять мутных дел и пятеро своих. Дави на связи, собирай команду и разруливай кипиш в кликкере с чёрным юмором.',
+  title: 'Кумовья — Большая семейка',
+  description: 'Семь глав и семеро своих, включая двоих с того света. Строй семейную империю от гаража до преисподней в кликкере с чёрным юмором.',
   icons: { icon: assetPath('game/kum-valera.png') },
   openGraph: {
-    title: 'Кумовья — район решает',
+    title: 'Кумовья — Большая семейка',
     description: 'Семья — это святое. Особенно когда всё записано на неё.',
     url: siteUrl,
     siteName: 'Кумовья',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Кумовья — район решает',
+    title: 'Кумовья — Большая семейка',
     description: 'Семья — это святое. Особенно когда всё записано на неё.',
     images: [socialImageUrl],
   },

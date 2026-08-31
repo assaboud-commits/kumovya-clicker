@@ -1,11 +1,15 @@
-import { characters, districts, missions, upgrades, STORY_REWARD, SAVE_KEY, LEGACY_SAVE_KEY, type CharacterId, type DistrictId, type Mission } from './game-data';
+import { characters, characterChapterGates, districts, missions, upgrades, STORY_REWARD, SAVE_KEY, PREVIOUS_SAVE_KEY, LEGACY_SAVE_KEY, type CharacterId, type DistrictId, type Mission } from './game-data';
+import { campaignChapters, type CampaignRoute, type CampaignStage, type CampaignMetric } from './campaign-data';
 import content from './district-content.json';
+import campaignContent from './campaign-content.json';
 
-export type Counters = { clicks: number; earned: number; passive: number; choices: number; upgrades: number };
-export type ActiveMission = { id: string; crew: CharacterId[]; baseline: Counters; reward: number };
+export type Counters = { clicks: number; earned: number; passive: number; choices: number; upgrades: number; quiet: number; bold: number; missions: number };
+export type ActiveMission = { id: string; crew: CharacterId[]; baseline: Counters; reward: number; target: number };
+export type CampaignState = { completed: CampaignRoute[]; stage: number; active: { baseline: Counters; crew: CharacterId[] } | null };
 export type GameState = {
-  version: 2; authority: number; lifetime: number; owned: number[]; sound: boolean; selected: number;
+  version: 3; authority: number; lifetime: number; owned: number[]; sound: boolean; selected: number;
   district: DistrictId; heat: number; stats: Counters; activeMission: ActiveMission | null;
+  campaign: CampaignState;
   missionRuns: Record<string, number>; bonds: Record<CharacterId, number>; storyClaims: CharacterId[];
   pendingEvent: { id: string; baseReward: number } | null; eventClicks: number; eventSerial: number;
   characterClicks: number; sequence: number;
@@ -23,6 +27,10 @@ export type GameAction =
   | { type: 'cancel-mission' }
   | { type: 'claim-mission' }
   | { type: 'resolve-event'; choice: number }
+  | { type: 'start-campaign-stage'; support?: CharacterId }
+  | { type: 'claim-campaign-stage' }
+  | { type: 'cancel-campaign-stage' }
+  | { type: 'resolve-chapter'; route: CampaignRoute }
   | { type: 'claim-story'; character: CharacterId };
 
 const MAX = Number.MAX_SAFE_INTEGER;
@@ -33,14 +41,15 @@ const characterIds = characters.map(({ id }) => id);
 const isCharacter = (id: unknown): id is CharacterId => characterIds.includes(id as CharacterId);
 const counters = (value: unknown): Counters => {
   const input = object(value);
-  return { clicks: integer(input.clicks), earned: number(input.earned), passive: number(input.passive), choices: integer(input.choices), upgrades: integer(input.upgrades) };
+  return { clicks: integer(input.clicks), earned: number(input.earned), passive: number(input.passive), choices: integer(input.choices), upgrades: integer(input.upgrades), quiet: integer(input.quiet), bold: integer(input.bold), missions: integer(input.missions) };
 };
 
 export function createGameState(): GameState {
   return {
-    version: 2, authority: 0, lifetime: 0, owned: upgrades.map(() => 0), sound: true, selected: 0,
+    version: 3, authority: 0, lifetime: 0, owned: upgrades.map(() => 0), sound: true, selected: 0,
     district: 'garages', heat: 0, stats: counters(null), activeMission: null, missionRuns: {},
-    bonds: { valera: 0, viktoria: 0, sara: 0, misha: 0, zina: 0 }, storyClaims: [],
+    campaign: { completed: [], stage: 0, active: null },
+    bonds: { valera: 0, viktoria: 0, sara: 0, misha: 0, zina: 0, azazel: 0, yaga: 0 }, storyClaims: [],
     pendingEvent: null, eventClicks: 0, eventSerial: 0, characterClicks: 0, sequence: 0, journal: [],
   };
 }
@@ -54,16 +63,25 @@ export function districtUnlocked(state: GameState, id: DistrictId) {
 }
 export function characterUnlocked(state: GameState, id: CharacterId) {
   const character = characters.find((item) => item.id === id);
-  return !!character && state.lifetime >= character.unlockAt;
+  return !!character && state.lifetime >= character.unlockAt && state.campaign.completed.length >= (characterChapterGates[id] ?? 0);
+}
+export function upgradeMilestone(count: number) { return 1 + Math.floor(count / 5) * .5; }
+export function campaignBonuses(state: GameState) {
+  return {
+    click: 1 + state.campaign.completed.filter((route) => route === 'bold').length * .05,
+    passive: 1 + state.campaign.completed.filter((route) => route === 'quiet').length * .05,
+  };
 }
 export function getPowers(state: GameState) {
   const character = characters[state.selected] ?? characters[0];
   const district = districts.find(({ id }) => id === state.district) ?? districts[0];
-  const baseClick = upgrades.reduce((sum, upgrade, index) => sum + upgrade.click * state.owned[index], 1);
-  const basePassive = upgrades.reduce((sum, upgrade, index) => sum + upgrade.passive * state.owned[index], 0);
+  const baseClick = upgrades.reduce((sum, upgrade, index) => sum + upgrade.click * state.owned[index] * upgradeMilestone(state.owned[index]), 1);
+  const basePassive = upgrades.reduce((sum, upgrade, index) => sum + upgrade.passive * state.owned[index] * upgradeMilestone(state.owned[index]), 0);
+  const bonuses = campaignBonuses(state);
+  const infernal = character.id === 'azazel' && state.heat >= 70 ? 1.5 : 1;
   return {
-    click: Math.max(1, Math.min(MAX, Math.round(baseClick * character.clickMultiplier * district.clickBonus))),
-    passive: Math.min(MAX, basePassive * character.passiveMultiplier * district.passiveBonus),
+    click: Math.max(1, Math.min(MAX, Math.round(baseClick * character.clickMultiplier * district.clickBonus * bonuses.click * infernal))),
+    passive: Math.min(MAX, basePassive * character.passiveMultiplier * district.passiveBonus * bonuses.passive),
   };
 }
 export function nextClickReward(state: GameState) {
@@ -74,12 +92,22 @@ export function upgradePrice(state: GameState, index: number) {
   const character = characters[state.selected] ?? characters[0];
   return Math.min(MAX, Math.floor(Math.floor(upgrades[index].baseCost * Math.pow(1.72, state.owned[index])) * character.priceMultiplier));
 }
+export function missionTarget(state: GameState, mission: Mission) {
+  const runs = state.missionRuns[mission.id] ?? 0;
+  if (!runs || mission.metric === 'upgrades') return mission.target;
+  const powers = getPowers(state);
+  const growth = mission.target * (1 + .5 * Math.min(runs, 12));
+  if (mission.metric === 'passive') return Math.ceil(Math.min(MAX, Math.max(growth, powers.passive * (30 + 10 * Math.min(runs, 6)))));
+  if (mission.metric === 'earned') return Math.ceil(Math.min(MAX, Math.max(growth, (powers.passive + powers.click * 2) * (25 + 10 * Math.min(runs, 6)))));
+  if (mission.metric === 'choices') return mission.target + Math.min(runs, 4);
+  return Math.ceil(mission.target * (1 + .35 * Math.min(runs, 12)));
+}
 export function missionProgress(state: GameState) {
   const active = state.activeMission;
   const mission = missions.find(({ id }) => id === active?.id);
   if (!active || !mission) return 0;
   const progress = state.stats[mission.metric] - active.baseline[mission.metric];
-  return Math.min(mission.target, Math.max(0, progress));
+  return Math.min(active.target, Math.max(0, progress));
 }
 export function missionQuote(state: GameState, mission: Mission, crew: CharacterId[]) {
   return Math.floor(mission.reward * (crew.includes(mission.specialist) ? 1.25 : 1) * (crew.length > 1 ? 1.1 : 1) * (state.heat >= 70 ? .8 : 1) * ((state.missionRuns[mission.id] ?? 0) > 0 ? .35 : 1));
@@ -87,6 +115,23 @@ export function missionQuote(state: GameState, mission: Mission, crew: Character
 export function eventRewards(state: GameState) {
   const base = state.pendingEvent?.baseReward ?? 0;
   return [base, Math.floor(base * 2.4)];
+}
+export function currentCampaignStage(state: GameState): CampaignStage | undefined {
+  return campaignChapters[state.campaign.completed.length]?.stages[state.campaign.stage];
+}
+export function campaignProgress(state: GameState) {
+  const stage = currentCampaignStage(state);
+  if (!stage) return [];
+  return (Object.entries(stage.goals) as [CampaignMetric, number][]).map(([metric, target]) => ({
+    metric, target, value: state.campaign.active ? Math.min(target, Math.max(0, state.stats[metric] - state.campaign.active.baseline[metric])) : 0,
+  }));
+}
+export function campaignCanClaim(state: GameState) {
+  const chapter = campaignChapters[state.campaign.completed.length];
+  const stage = currentCampaignStage(state);
+  return !!state.campaign.active && !!chapter && !!stage && state.district === chapter.district
+    && state.authority >= stage.investment && campaignProgress(state).every(({ value, target }) => value >= target)
+    && (stage.maxHeat === undefined || state.heat <= stage.maxHeat) && (stage.minHeat === undefined || state.heat >= stage.minHeat);
 }
 function earn(state: GameState, amount: number): GameState {
   return { ...state, authority: Math.min(MAX, state.authority + amount), lifetime: Math.min(MAX, state.lifetime + amount), stats: { ...state.stats, earned: Math.min(MAX, state.stats.earned + amount) } };
@@ -96,7 +141,7 @@ function log(state: GameState, title: string, text: string, amount = 0): GameSta
   return { ...state, sequence: id, journal: [{ id, title, text, amount }, ...state.journal].slice(0, 8) };
 }
 
-// v1 is read without altering or deleting it. A new v2 record is saved separately.
+// Earlier versions remain untouched. The longer campaign is stored separately in v3.
 export function restoreGameState(value: unknown): GameState {
   const input = object(value);
   const state = createGameState();
@@ -104,6 +149,14 @@ export function restoreGameState(value: unknown): GameState {
   state.lifetime = Math.max(state.authority, number(input.lifetime));
   state.owned = upgrades.map((_, index) => Array.isArray(input.owned) ? integer(input.owned[index]) : 0);
   state.sound = typeof input.sound === 'boolean' ? input.sound : true;
+  const campaign = object(input.campaign);
+  if (Array.isArray(campaign.completed)) {
+    for (const route of campaign.completed.slice(0, campaignChapters.length)) {
+      if (route !== 'quiet' && route !== 'bold') break;
+      state.campaign.completed.push(route);
+    }
+  }
+  state.campaign.stage = state.campaign.completed.length === campaignChapters.length ? 0 : Math.min(3, integer(campaign.stage));
   state.selected = integer(input.selected);
   if (state.selected >= characters.length || !characterUnlocked(state, characters[state.selected].id)) state.selected = 0;
   state.stats = counters(input.stats);
@@ -111,6 +164,7 @@ export function restoreGameState(value: unknown): GameState {
   state.heat = Math.min(100, number(input.heat));
   const runs = object(input.missionRuns);
   for (const mission of missions) if (integer(runs[mission.id])) state.missionRuns[mission.id] = integer(runs[mission.id]);
+  state.stats.missions = Math.min(MAX, Object.values(state.missionRuns).reduce((sum, count) => sum + count, 0));
   const bonds = object(input.bonds);
   for (const id of characterIds) state.bonds[id] = integer(bonds[id]);
   state.storyClaims = Array.isArray(input.storyClaims) ? [...new Set(input.storyClaims.filter(isCharacter))] : [];
@@ -133,8 +187,18 @@ export function restoreGameState(value: unknown): GameState {
       const baseline = counters(active.baseline);
       for (const metric of Object.keys(baseline) as (keyof Counters)[]) baseline[metric] = Math.min(state.stats[metric], baseline[metric]);
       const reward = Math.max(1, Math.min(Math.floor(mission.reward * 1.375), integer(active.reward, missionQuote(state, mission, crew))));
-      state.activeMission = { id: mission.id, crew, baseline, reward };
+      state.activeMission = { id: mission.id, crew, baseline, reward, target: Math.max(1, integer(active.target, mission.target)) };
       state.district = mission.district;
+    }
+  }
+  const project = object(campaign.active);
+  const stage = currentCampaignStage(state);
+  if (stage && Array.isArray(project.crew)) {
+    const crew = [...new Set(project.crew.filter(isCharacter))].filter((id) => characterUnlocked(state, id)).slice(0, 2);
+    if (crew.length && (stage.crew ?? []).every((id) => crew.includes(id))) {
+      const baseline = counters(project.baseline);
+      for (const metric of Object.keys(baseline) as (keyof Counters)[]) baseline[metric] = Math.min(state.stats[metric], baseline[metric]);
+      state.campaign.active = { crew, baseline };
     }
   }
   return state;
@@ -142,7 +206,7 @@ export function restoreGameState(value: unknown): GameState {
 
 export function readGameSave(read: (key: string) => string | null) {
   let unreadable = false;
-  for (const key of [SAVE_KEY, LEGACY_SAVE_KEY]) {
+  for (const key of [SAVE_KEY, PREVIOUS_SAVE_KEY, LEGACY_SAVE_KEY]) {
     try {
       const raw = read(key);
       if (!raw) continue;
@@ -155,7 +219,7 @@ export function readGameSave(read: (key: string) => string | null) {
         || !candidate.owned.every((count) => typeof count === 'number' && Number.isFinite(count) && count >= 0)) {
         unreadable = true; continue;
       }
-      return { state: restoreGameState(value), migrated: key === LEGACY_SAVE_KEY, unreadable: false };
+      return { state: restoreGameState(value), migrated: key !== SAVE_KEY, unreadable: false };
     } catch { unreadable = true; }
   }
   return { state: createGameState(), migrated: false, unreadable };
@@ -176,7 +240,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const amount = getPowers(state).passive * seconds;
       if (!amount && !state.heat) return state;
       const next = earn(state, amount);
-      return { ...next, heat: Math.max(0, state.heat - seconds * .1), stats: { ...next.stats, passive: Math.min(MAX, state.stats.passive + amount) } };
+      const cooling = characters[state.selected].id === 'yaga' ? .5 : .1;
+      return { ...next, heat: Math.max(0, state.heat - seconds * cooling), stats: { ...next.stats, passive: Math.min(MAX, state.stats.passive + amount) } };
     }
     case 'click': {
       const amount = nextClickReward(state);
@@ -206,15 +271,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.activeMission || !mission || mission.district !== state.district || !districtUnlocked(state, mission.district)) return state;
       const crew: CharacterId[] = [characters[state.selected].id];
       if (action.support && action.support !== crew[0] && characterUnlocked(state, action.support)) crew.push(action.support);
-      return { ...state, activeMission: { id: mission.id, crew, baseline: { ...state.stats }, reward: missionQuote(state, mission, crew) } };
+      return { ...state, activeMission: { id: mission.id, crew, baseline: { ...state.stats }, reward: missionQuote(state, mission, crew), target: missionTarget(state, mission) } };
     }
     case 'cancel-mission': return { ...state, activeMission: null };
     case 'claim-mission': {
       const active = state.activeMission;
       const mission = missions.find(({ id }) => id === active?.id);
-      if (!active || !mission || missionProgress(state) < mission.target) return state;
+      if (!active || !mission || missionProgress(state) < active.target) return state;
       const next = earn(state, active.reward);
       next.missionRuns = { ...state.missionRuns, [mission.id]: (state.missionRuns[mission.id] ?? 0) + 1 };
+      next.stats.missions = Math.min(MAX, state.stats.missions + 1);
       next.bonds = { ...state.bonds };
       for (const id of active.crew) next.bonds[id] = Math.min(MAX, next.bonds[id] + 1);
       next.activeMission = null;
@@ -228,12 +294,44 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const next = earn(state, reward);
       next.pendingEvent = null;
       next.stats.choices = Math.min(MAX, state.stats.choices + 1);
+      const route = action.choice === 0 ? 'quiet' : 'bold';
+      next.stats[route] = Math.min(MAX, state.stats[route] + 1);
       next.heat = Math.max(0, Math.min(100, state.heat + (action.choice === 0 ? -12 : 18)));
       return log(next, event.title, event.choices[action.choice].result, reward);
     }
+    case 'start-campaign-stage': {
+      const chapter = campaignChapters[state.campaign.completed.length];
+      const stage = currentCampaignStage(state);
+      if (!chapter || !stage || state.campaign.active || state.district !== chapter.district || !districtUnlocked(state, chapter.district)) return state;
+      const crew: CharacterId[] = [characters[state.selected].id];
+      if (action.support && action.support !== crew[0] && characterUnlocked(state, action.support)) crew.push(action.support);
+      if (!(stage.crew ?? []).every((id) => crew.includes(id))) return state;
+      return { ...state, campaign: { ...state.campaign, active: { crew, baseline: { ...state.stats } } } };
+    }
+    case 'cancel-campaign-stage': return { ...state, campaign: { ...state.campaign, active: null } };
+    case 'claim-campaign-stage': {
+      if (!campaignCanClaim(state)) return state;
+      const chapterIndex = state.campaign.completed.length;
+      const stage = currentCampaignStage(state)!;
+      const next = earn({ ...state, authority: state.authority - stage.investment }, stage.reward);
+      next.bonds = { ...state.bonds };
+      for (const id of state.campaign.active!.crew) next.bonds[id] = Math.min(MAX, next.bonds[id] + 1);
+      next.campaign = { ...state.campaign, stage: state.campaign.stage + 1, active: null };
+      const story = campaignContent.chapters[chapterIndex];
+      return log(next, 'Большое дело: ' + story.stages[state.campaign.stage].title, 'Этап закреплён. Вклад в район: ' + stage.investment + ' авторитета. Команда стала ближе.', stage.reward);
+    }
+    case 'resolve-chapter': {
+      const index = state.campaign.completed.length;
+      const chapter = campaignChapters[index];
+      if (!chapter || state.campaign.stage !== chapter.stages.length || state.campaign.active || (action.route !== 'quiet' && action.route !== 'bold')) return state;
+      const next = earn(state, chapter.reward);
+      next.campaign = { completed: [...state.campaign.completed, action.route], stage: 0, active: null };
+      const story = campaignContent.chapters[index];
+      return log(next, 'Глава закрыта: ' + story.title, story.ending + ' ' + (action.route === 'quiet' ? story.quietResult : story.boldResult), chapter.reward);
+    }
     case 'claim-story': {
       if (!isCharacter(action.character) || state.bonds[action.character] < 2 || state.storyClaims.includes(action.character)) return state;
-      const story = content.stories.find(({ characterId }) => characterId === action.character);
+      const story = [...content.stories, ...campaignContent.stories].find(({ characterId }) => characterId === action.character);
       const next = earn(state, STORY_REWARD);
       next.storyClaims = [...state.storyClaims, action.character];
       return log(next, 'Свой человек: ' + characters.find(({ id }) => id === action.character)!.name, story?.quote ?? 'Теперь мы знаем больше.', STORY_REWARD);

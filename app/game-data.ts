@@ -26,6 +26,9 @@ export const ranks = [
   [8000, 'Решала района'],
   [35000, 'Крёстный бухгалтерии'],
   [150000, 'Легенда семейного чата'],
+  [500000, 'Кум по обе стороны жизни'],
+  [2000000, 'Хозяин последнего слова'],
+  [10000000, 'Семья районного масштаба'],
 ] as const;
 
 export const characters = [
@@ -94,9 +97,36 @@ export const characters = [
     eventMultiplier: 2.5,
     eventChance: .12,
   },
+  {
+    id: 'azazel',
+    name: 'Кум Азазель',
+    role: 'Адский решала',
+    perk: 'Тычки +40%; при палеве от 70 — ещё ×1,5. Любит, когда район горит.',
+    image: assetPath('game/kum-azazel.png'),
+    unlockAt: 0,
+    clickMultiplier: 1.4,
+    passiveMultiplier: 1,
+    priceMultiplier: 1,
+    eventMultiplier: 1,
+    eventChance: .18,
+  },
+  {
+    id: 'yaga',
+    name: 'Баба Яга',
+    role: 'Председатель ТСЖ «Избушка»',
+    perk: 'Доход +60%. Палево остывает в пять раз быстрее: минус 5 за 10 секунд.',
+    image: assetPath('game/baba-yaga.png'),
+    unlockAt: 0,
+    clickMultiplier: 1,
+    passiveMultiplier: 1.6,
+    priceMultiplier: 1,
+    eventMultiplier: 1,
+    eventChance: .18,
+  },
 ] as const;
 
 export type CharacterId = typeof characters[number]['id'];
+export const characterChapterGates: Partial<Record<CharacterId, number>> = { azazel: 4, yaga: 5 };
 export type DistrictId = 'garages' | 'market' | 'council';
 export type MissionMetric = 'clicks' | 'earned' | 'upgrades' | 'choices' | 'passive';
 
@@ -116,17 +146,18 @@ export const missions: Mission[] = [
   { id: 'last-toast', district: 'garages', title: 'Тост, который переживёт всех', description: 'Проведи репетицию праздника. После третьего круга гости начинают писать завещания.', metric: 'clicks', target: 36, reward: 420, specialist: 'viktoria', success: 'Тост закончен. Выжившим выданы слова благодарности.' },
   { id: 'chat-alive', district: 'garages', title: 'Чат живее всех живых', description: 'Наладь пассивный доход: купи мангал или телефон в ларьке и собери поступления.', metric: 'passive', target: 80, reward: 600, specialist: 'sara', success: 'Пока все молчали, чат освоил бюджет. Сара закрепила результат.' },
   { id: 'discount', district: 'market', title: 'Скидка до последнего вздоха', description: 'Заработай авторитет любым способом. Миша должен произвести впечатление на ценники.', metric: 'earned', target: 900, reward: 950, specialist: 'misha', success: 'Ценники снижены. Продавец просит не хвалить его вслух.' },
-  { id: 'wreaths', district: 'market', title: 'Венки на открытие', description: 'Разрули два кипиша. Торжественный и траурный отделы снова перепутали заказ.', metric: 'choices', target: 2, reward: 1100, specialist: 'viktoria', success: 'Ленты перевернули. Теперь «Вечная память» — программа лояльности.' },
+  { id: 'wreaths', district: 'market', title: 'Венки на открытие', description: 'Разрули кипиши. Торжественный и траурный отделы снова перепутали заказ.', metric: 'choices', target: 2, reward: 1100, specialist: 'viktoria', success: 'Ленты перевернули. Теперь «Вечная память» — программа лояльности.' },
   { id: 'rent', district: 'market', title: 'Аренда без пульса', description: 'Купи шесть улучшений в ларьке после начала дела. Отчётность вырастет. Бухгалтерия не воскреснет.', metric: 'upgrades', target: 6, reward: 1400, specialist: 'sara', success: 'Ларёк оброс связями. Арендодатель — суевериями.' },
-  { id: 'mezzanine', district: 'council', title: 'Антресоль на три этажа', description: 'Разрули три кипиша. У одноэтажного ларька внезапно обнаружился собственный лифт.', metric: 'choices', target: 3, reward: 2100, specialist: 'zina', success: 'Третий этаж признан ошибкой зрения. Лифт продолжает ошибаться.' },
+  { id: 'mezzanine', district: 'council', title: 'Антресоль на три этажа', description: 'Разрули кипиши. У одноэтажного ларька внезапно обнаружился собственный лифт.', metric: 'choices', target: 3, reward: 2100, specialist: 'zina', success: 'Третий этаж признан ошибкой зрения. Лифт продолжает ошибаться.' },
   { id: 'bench-will', district: 'council', title: 'Завещание на лавочку', description: 'Заработай авторитет для общественного проекта. Сидеть на нём пока запрещено.', metric: 'earned', target: 2500, reward: 2800, specialist: 'zina', success: 'Лавочка открыта. Право сидеть наследуется по отдельному акту.' },
-  { id: 'inauguration', district: 'council', title: 'Инаугурация без свидетелей', description: 'Закрепи влияние сотней тычков. Микрофон передают только своим.', metric: 'clicks', target: 100, reward: 3500, specialist: 'misha', success: 'Район признал семейку. Кто не признал, просто ещё не в чате.' },
+  { id: 'inauguration', district: 'council', title: 'Инаугурация без свидетелей', description: 'Закрепи влияние тычками. Микрофон передают только своим.', metric: 'clicks', target: 100, reward: 3500, specialist: 'misha', success: 'Район признал семейку. Кто не признал, просто ещё не в чате.' },
 ];
 
 export const metricLabels: Record<MissionMetric, string> = {
   clicks: 'Нажатия после старта', earned: 'Заработано после старта', upgrades: 'Куплено улучшений после старта',
   choices: 'Разрешено кипишей после старта', passive: 'Пассивный доход после старта',
 };
-export const SAVE_KEY = 'kumovya-save-v2';
+export const SAVE_KEY = 'kumovya-save-v3';
+export const PREVIOUS_SAVE_KEY = 'kumovya-save-v2';
 export const LEGACY_SAVE_KEY = 'kumovya-save-v1';
 export const STORY_REWARD = 500;

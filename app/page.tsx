@@ -2,8 +2,11 @@
 
 import { type MouseEvent, useEffect, useReducer, useRef, useState } from 'react';
 import { initializeTelegram } from './telegram';
-import { characters, districts, missions, upgrades, ranks, metricLabels, SAVE_KEY, STORY_REWARD, type CharacterId } from './game-data';
-import { createGameState, gameReducer, getPowers, nextClickReward, upgradePrice, missionProgress, missionQuote, districtUnlocked, characterUnlocked, completedMissions, eventRewards, readGameSave } from './game-engine';
+import { characters, characterChapterGates, districts, missions, upgrades, ranks, metricLabels, SAVE_KEY, STORY_REWARD, type CharacterId } from './game-data';
+import { createGameState, gameReducer, getPowers, nextClickReward, upgradePrice, upgradeMilestone, missionTarget, missionProgress, missionQuote, districtUnlocked, characterUnlocked, completedMissions, eventRewards, readGameSave, campaignProgress } from './game-engine';
+import CampaignPanel from './campaign-panel';
+import { campaignMetricLabels } from './campaign-data';
+import campaignContent from './campaign-content.json';
 import content from './district-content.json';
 
 type FloatHit = { id: number; x: number; y: number; value: number };
@@ -20,7 +23,7 @@ export default function Home() {
   const [saveUnavailable, setSaveUnavailable] = useState(false);
   const [migrated, setMigrated] = useState(false);
   const [loadWarning, setLoadWarning] = useState(false);
-  const [tab, setTab] = useState<'missions' | 'shop' | 'album'>('missions');
+  const [tab, setTab] = useState<'campaign' | 'missions' | 'shop' | 'album'>('campaign');
   const [support, setSupport] = useState<CharacterId | ''>('');
   const [floats, setFloats] = useState<FloatHit[]>([]);
   const [pressed, setPressed] = useState(false);
@@ -39,6 +42,9 @@ export default function Home() {
   const completed = completedMissions(game);
   const activeMission = missions.find(({ id }) => id === game.activeMission?.id);
   const progress = missionProgress(game);
+  const activeTarget = game.activeMission?.target ?? 0;
+  const chapterIndex = game.campaign.completed.length;
+  const bigGoals = campaignProgress(game);
   const pendingEvent = content.events.find(({ id }) => id === game.pendingEvent?.id);
   const payouts = eventRewards(game);
   const partner = support && support !== activeCharacter.id && characterUnlocked(game, support) ? support : undefined;
@@ -88,6 +94,10 @@ export default function Home() {
     eventRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
     eventTitleRef.current?.focus({ preventScroll: true });
   }
+  function announceCampaign(message: string) {
+    setAnnouncement(message);
+    window.setTimeout(() => panelTitleRef.current?.focus({ preventScroll: true }), 0);
+  }
   function resolveEvent(index: 0 | 1) {
     if (!pendingEvent) return;
     const choice = pendingEvent.choices[index];
@@ -133,7 +143,7 @@ export default function Home() {
       <div className="noise" aria-hidden="true" />
       <header className="topbar">
         <div className="brand-block">
-          <p className="eyebrow">Новая глава · Район решает</p>
+          <p className="eyebrow">Большая семейка · семь глав и двое с того света</p>
           <h1>КУМОВЬЯ</h1>
           <p className="motto">Семья — это святое. Особенно когда весь район записан на неё.</p>
         </div>
@@ -148,7 +158,7 @@ export default function Home() {
       <div className="ticker" aria-label="Срочные новости"><span>СРОЧНО</span><p>Район выставлен на семейное обсуждение. Возражения принимаются через тётю Зину.</p></div>
 
       <section className="district-map" aria-label="Три района">
-        <div className="chapter-heading"><div><p className="eyebrow">От гаража до главного кабинета</p><h2>Территория своих</h2></div><span>{completed} / 10 дел закрыто</span></div>
+        <div className="chapter-heading"><div><p className="eyebrow">От гаража до главного кабинета</p><h2>Территория своих</h2></div><span>{chapterIndex} / 7 больших глав<br />{completed} / 10 поручений</span></div>
         <div className="district-cards">
           {districts.map((district) => {
             const unlocked = districtUnlocked(game, district.id);
@@ -166,6 +176,7 @@ export default function Home() {
         <p className="district-description"><strong>{location.name}.</strong> {location.description} {game.activeMission && <span>Переезд доступен после завершения или отмены дела.</span>}</p>
       </section>
 
+      <button type="button" className="campaign-strip" onClick={() => openPanel('campaign')}><span><small>БОЛЬШАЯ СЕМЕЙКА · ДЛИННАЯ КАМПАНИЯ</small><strong>{chapterIndex === 7 ? 'Район принят на семейный баланс' : 'Глава ' + (chapterIndex + 1) + ': ' + campaignContent.chapters[chapterIndex].title}</strong></span><b>{chapterIndex === 7 ? 'К ФИНАЛУ' : 'К БОЛЬШОМУ ДЕЛУ →'}</b></button>
       {migrated && <p className="migration-note" role="status">Семейный архив принят: твой авторитет, покупки и открытые персонажи перенесены без сброса.</p>}
       {loadWarning && <p className="migration-note warning" role="status">Сохранение не удалось прочитать. Старые данные не изменены; до восстановления архива новая игра работает без сохранения.</p>}
       <p className="sr-only" aria-live="polite">{announcement}</p>
@@ -189,31 +200,33 @@ export default function Home() {
             <div className="click-plate"><span>ДАВИ НА СВЯЗИ</span><small>{activeCharacter.perk}</small></div>
           </div>
 
-          <div className="character-roster" aria-label="Пятёрка персонажей">
+          <div className="character-roster" aria-label="Семеро своих">
             {characters.map((character, index) => {
               const unlocked = characterUnlocked(game, character.id);
-              return <button type="button" key={character.id} className={'roster-card' + (game.selected === index ? ' active' : '')} disabled={!ready || !unlocked} onClick={() => dispatch({ type: 'select', index })} aria-pressed={game.selected === index} aria-label={unlocked ? 'Выбрать: ' + character.name + ', ' + character.role : character.name + ' откроется при ' + character.unlockAt + ' общего авторитета'}>
+              const gate = characterChapterGates[character.id];
+              return <button type="button" key={character.id} className={'roster-card' + (game.selected === index ? ' active' : '')} disabled={!ready || !unlocked} onClick={() => dispatch({ type: 'select', index })} aria-pressed={game.selected === index} aria-label={unlocked ? 'Выбрать: ' + character.name + ', ' + character.role : character.name + (gate ? ' присоединится после главы ' + gate : ' откроется при ' + character.unlockAt + ' общего авторитета')}>
                 <img src={character.image} alt="" draggable={false} />
                 <span><strong>{character.name}</strong><small>{character.role}</small></span>
-                {!unlocked && <i className="roster-lock">{formatNumber(character.unlockAt)}</i>}
+                {!unlocked && <i className="roster-lock">{gate ? 'ГЛ. ' + gate : formatNumber(character.unlockAt)}</i>}
               </button>;
             })}
           </div>
 
+          {game.campaign.active && <section className="campaign-compact" aria-label="Активный этап кампании"><p className="eyebrow">Большое дело идёт параллельно</p><h3>{campaignContent.chapters[chapterIndex].stages[game.campaign.stage].title}</h3>{bigGoals.map(({ metric, value, target }) => <span key={metric}>{campaignMetricLabels[metric]}: <b>{formatNumber(value)} / {formatNumber(target)}</b></span>)}<button type="button" className="text-button" onClick={() => openPanel('campaign')}>Условия и сдача этапа →</button></section>}
           <div className="active-deal">
             {activeMission && game.activeMission ? <>
               <p className="eyebrow">Дело в работе · награда зафиксирована</p>
               <h3 ref={dealTitleRef} tabIndex={-1}>{activeMission.title}</h3>
               <p className="crew-line">{game.activeMission.crew.map((id) => characters.find((character) => character.id === id)!.name).join(' + ')}</p>
-              <div className="mission-progress-label"><span>{metricLabels[activeMission.metric]}</span><b>{formatNumber(progress)} / {formatNumber(activeMission.target)}</b></div>
-              <progress value={progress} max={activeMission.target} aria-label={'Прогресс дела ' + activeMission.title} />
-              <div className="deal-actions"><button className="action-button" type="button" disabled={!ready || progress < activeMission.target} onClick={() => dispatch({ type: 'claim-mission' })}>{progress >= activeMission.target ? 'ЗАБРАТЬ +' + formatNumber(game.activeMission.reward) : 'В РАБОТЕ · +' + formatNumber(game.activeMission.reward)}</button><button className="text-button" type="button" onClick={() => dispatch({ type: 'cancel-mission' })}>Отменить без штрафа</button></div>
-              {activeMission.metric === 'upgrades' && progress < activeMission.target && <button className="text-button" type="button" onClick={() => openPanel('shop')}>Купить улучшения в ларьке →</button>}
+              <div className="mission-progress-label"><span>{metricLabels[activeMission.metric]}</span><b>{formatNumber(progress)} / {formatNumber(activeTarget)}</b></div>
+              <progress value={progress} max={activeTarget} aria-label={'Прогресс дела ' + activeMission.title} />
+              <div className="deal-actions"><button className="action-button" type="button" disabled={!ready || progress < activeTarget} onClick={() => dispatch({ type: 'claim-mission' })}>{progress >= activeTarget ? 'ЗАБРАТЬ +' + formatNumber(game.activeMission.reward) : 'В РАБОТЕ · +' + formatNumber(game.activeMission.reward)}</button><button className="text-button" type="button" onClick={() => dispatch({ type: 'cancel-mission' })}>Отменить без штрафа</button></div>
+              {activeMission.metric === 'upgrades' && progress < activeTarget && <button className="text-button" type="button" onClick={() => openPanel('shop')}>Купить улучшения в ларьке →</button>}
               {activeMission.metric === 'passive' && powers.passive === 0 && <button className="text-button" type="button" onClick={() => openPanel('shop')}>Для дохода нужен мангал или телефон →</button>}
               {activeMission.metric === 'choices' && !pendingEvent && <p className="subtle">Нажимай на героя — кипиш появится не позднее 36 нажатий.</p>}
             </> : <>
-              <p className="eyebrow">Связи сами себя не используют</p><h3 ref={dealTitleRef} tabIndex={-1}>{completed === 10 ? 'Район решён. Теперь — по-семейному.' : completed ? 'Пора за следующее мутное дело' : 'Возьми первое мутное дело'}</h3>
-              <p>Выбирай дело, подключай напарника и зарабатывай авторитет. Два дела с героем откроют его личную историю.</p>
+              <p className="eyebrow">Поручения между большими делами</p><h3 ref={dealTitleRef} tabIndex={-1}>{completed === 10 ? 'На районе снова есть работа' : completed ? 'Пора за следующее мутное дело' : 'Возьми первое мутное дело'}</h3>
+              <p>Поручения помогают большой кампании. Два совместных дела или этапа с героем откроют его личную историю.</p>
               <button className="action-button" type="button" onClick={() => openPanel('missions')}>{completed === 10 ? 'ПЕРЕИГРАТЬ ДЕЛА' : 'ВЫБРАТЬ ДЕЛО →'}</button>
             </>}
           </div>
@@ -221,7 +234,7 @@ export default function Home() {
           <section className={'heat-panel' + (game.heat >= 70 ? ' hot' : '')} aria-label="Уровень палева">
             <div><strong>ПАЛЕВО</strong><span>{Math.ceil(game.heat)} / 100 · {game.heat >= 70 ? 'На карандаше' : game.heat >= 35 ? 'Уже шепчутся' : 'Пока свои'}</span></div>
             <progress value={game.heat} max={100} aria-label="Палево" />
-            <p>С 70 палева новые дела дают на 20% меньше. Тихие решения снижают палево на 12; в открытой игре оно остывает на 1 за 10 секунд.</p>
+            <p>С 70 палева новые поручения дают на 20% меньше. Тихие решения снимают 12; само остывает на {activeCharacter.id === 'yaga' ? '5' : '1'} за 10 секунд открытой игры.{activeCharacter.id === 'azazel' && ' Азазель при палеве от 70 получает ещё ×1,5 к тычку.'}</p>
           </section>
 
           {pendingEvent && <section className="choice-event" ref={eventRef} aria-labelledby="event-title">
@@ -236,11 +249,13 @@ export default function Home() {
 
         <aside className="shop-card district-workspace" ref={panelRef}>
           <nav className="tabs expansion-tabs" aria-label="Разделы игры">
+            <button type="button" className={tab === 'campaign' ? 'active' : ''} aria-pressed={tab === 'campaign'} onClick={() => setTab('campaign')}>Большая семейка</button>
             <button type="button" className={tab === 'missions' ? 'active' : ''} aria-pressed={tab === 'missions'} onClick={() => setTab('missions')}>Мутные дела</button>
             <button type="button" className={tab === 'shop' ? 'active' : ''} aria-pressed={tab === 'shop'} onClick={() => setTab('shop')}>Мутный ларёк</button>
             <button type="button" className={tab === 'album' ? 'active' : ''} aria-pressed={tab === 'album'} onClick={() => setTab('album')}>Семейный альбом</button>
           </nav>
 
+          {tab === 'campaign' && <CampaignPanel game={game} ready={ready} support={partner} setSupport={setSupport} dispatch={dispatch} titleRef={panelTitleRef} format={formatNumber} openPanel={openPanel} announce={announceCampaign} />}
           {tab === 'missions' && <div className="missions-content">
             <div className="shop-heading"><div><p className="eyebrow">Дела без лишних свидетелей</p><h2 ref={panelTitleRef} tabIndex={-1}>{location.name}</h2></div><span>{completed}/10</span></div>
             <p className="mission-intro">Один герой ведёт дело, второй может прикрыть. Специалист даёт +25% к награде, напарник — ещё +10%.</p>
@@ -254,32 +269,33 @@ export default function Home() {
               return <article className={'mission-card' + (runs > 0 ? ' completed' : '') + (inProgress ? ' in-progress' : '')} key={mission.id}>
                 <div className="mission-topline"><span>ДЕЛО {String(index + 1).padStart(2, '0')}</span><b>{inProgress ? 'В РАБОТЕ' : runs > 0 ? 'ЗАКРЫТО · ×' + runs : 'ЕСТЬ ТЕМА'}</b></div>
                 <h3>{mission.title}</h3><p>{mission.description}</p>
-                <div className="mission-goal">{metricLabels[mission.metric]}: <strong>{formatNumber(mission.target)}</strong></div>
+                <div className="mission-goal">{metricLabels[mission.metric]}: <strong>{formatNumber(inProgress ? activeTarget : missionTarget(game, mission))}</strong>{runs > 0 && <small>{mission.metric === 'upgrades' ? ' · нужны новые покупки' : ' · цель повтора растёт вместе с хозяйством'}</small>}</div>
                 <div className="specialist"><img src={specialist.image} alt="" /><span>В теме: <strong>{specialist.name}</strong>{crew.includes(mission.specialist) && ' · бонус команды'}</span></div>
                 <div className="mission-bottom"><div><strong>+{formatNumber(inProgress ? game.activeMission!.reward : missionQuote(game, mission, crew))}</strong><small>{runs > 0 ? 'Повтор: 35% базовой награды' : 'авторитета за дело'}</small></div><button className="action-button" type="button" disabled={!ready || !!game.activeMission} onClick={() => dispatch({ type: 'start-mission', id: mission.id, support: partner })}>{inProgress ? 'В РАБОТЕ' : runs > 0 ? 'ПОВТОРИТЬ' : 'ВЗЯТЬ ДЕЛО'}</button></div>
               </article>;
             })}</div>
-            {completed === 10 && <div className="chapter-complete"><strong>РАЙОН РЕШЁН</strong><p>Все десять дел закрыты. Собери оставшиеся истории в альбоме или переиграй дела другой командой.</p></div>}
+            {completed === 10 && <div className="chapter-complete"><strong>СВОЙ В КАЖДОМ РАЙОНЕ</strong><p>Все десять поручений знакомы. Главная история продолжается в «Большой семейке» — семь глав и потусторонняя родня.</p><button className="text-button" type="button" onClick={() => openPanel('campaign')}>Продолжить кампанию →</button></div>}
           </div>}
 
           {tab === 'shop' && <div className="shop-content">
             <div className="shop-heading"><div><p className="eyebrow">Инвестиции без свидетелей</p><h2 ref={panelTitleRef} tabIndex={-1}>Усилить связи</h2></div><span>ЧЕКОВ НЕТ</span></div>
             <p className="active-perk"><strong>{activeCharacter.role}:</strong> {activeCharacter.perk}</p>
             <p className="subtle">{location.name}: {location.perk}. Пассивный доход начисляется, пока игра открыта.</p>
+            <p className="upgrade-milestone-note">Каждые 5 покупок одного улучшения усиливают всю его сеть: ×1,5 на пятой, ×2 на десятой, ×2,5 на пятнадцатой. Планируй вложения между этапами.</p>
             <div className="upgrade-list">{upgrades.map((upgrade, index) => {
               const cost = upgradePrice(game, index);
               return <button type="button" className="upgrade-card" key={upgrade.id} disabled={!ready || game.authority < cost} onClick={() => dispatch({ type: 'buy', index })}>
                 <span className="upgrade-icon" style={{ backgroundPosition: upgrade.position }} aria-hidden="true" />
-                <span className="upgrade-copy"><span className="upgrade-title-row"><strong>{upgrade.name}</strong><b>×{game.owned[index]}</b></span><small>{upgrade.description}</small><span className="upgrade-effect">{upgrade.click ? '+' + upgrade.click + ' за тычок' : '+' + upgrade.passive + '/сек'}</span></span>
+                <span className="upgrade-copy"><span className="upgrade-title-row"><strong>{upgrade.name}</strong><b>×{game.owned[index]}</b></span><small>{upgrade.description}</small><span className="upgrade-effect">{upgrade.click ? '+' + upgrade.click + ' за тычок' : '+' + upgrade.passive + '/сек'} · сеть ×{upgradeMilestone(game.owned[index]).toLocaleString('ru-RU')}</span><span className="milestone-next">Следующий рубеж: {(Math.floor(game.owned[index] / 5) + 1) * 5} покупок</span></span>
                 <span className="price">{formatNumber(cost)}<small>АВТ.</small></span>
               </button>;
             })}</div>
           </div>}
 
           {tab === 'album' && <div className="album-content">
-            <div className="shop-heading"><div><p className="eyebrow">За каждым лицом — дело</p><h2 ref={panelTitleRef} tabIndex={-1}>Свои люди</h2></div><span>{game.storyClaims.length}/5</span></div>
-            <p className="mission-intro">Закрой два дела с героем в команде — узнаешь его историю и получишь +{STORY_REWARD} авторитета. Повторные дела тоже считаются.</p>
-            <div className="story-list">{content.stories.map((story) => {
+            <div className="shop-heading"><div><p className="eyebrow">За каждым лицом — дело</p><h2 ref={panelTitleRef} tabIndex={-1}>Свои люди</h2></div><span>{game.storyClaims.length}/{characters.length}</span></div>
+            <p className="mission-intro">Закрой два поручения или этапа с героем в команде — узнаешь его историю и получишь +{STORY_REWARD} авторитета. Азазель приходит после четвёртой главы, Яга — после пятой.</p>
+            <div className="story-list">{[...content.stories, ...campaignContent.stories].map((story) => {
               const character = characters.find(({ id }) => id === story.characterId)!;
               const bond = game.bonds[character.id];
               const unlocked = bond >= 2;
@@ -300,7 +316,7 @@ export default function Home() {
         </aside>
       </section>
 
-      <p className="save-status" role="status">{saveUnavailable || loadWarning ? 'Сохранение недоступно: новый прогресс останется только до закрытия игры.' : 'Прогресс, незавершённые дела и выборы сохраняются на этом устройстве. Между устройствами пока не синхронизируются.'}</p>
+      <p className="save-status" role="status">Большая семейка · версия 3. {saveUnavailable || loadWarning ? 'Сохранение недоступно: новый прогресс останется только до закрытия игры.' : 'Главы, этапы, незавершённые поручения и выборы сохраняются на этом устройстве. Между устройствами пока не синхронизируются.'}</p>
     </main>
   );
 }
