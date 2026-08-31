@@ -23,6 +23,8 @@ body {
 button, input, textarea, select { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 3px; }
+.sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+h2[tabindex="-1"]:focus,h3[tabindex="-1"]:focus { outline:3px solid var(--mustard); outline-offset:4px; }
 
 .game-shell {
   --shell-x: clamp(14px, 2.8vw, 44px);
@@ -487,6 +489,220 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 3px; }
 
 .save-status { position:relative; max-width:1540px; margin:20px auto 0; color:#aa9d7b; font: .7rem/1.5 Arial,sans-serif; }
 .event-toast { right:calc(24px + var(--safe-right) + var(--tg-content-safe-area-inset-right, 0px)); bottom:calc(24px + var(--safe-bottom) + var(--tg-content-safe-area-inset-bottom, 0px)); max-width:calc(100vw - 48px - var(--safe-left) - var(--safe-right) - var(--tg-content-safe-area-inset-left, 0px) - var(--tg-content-safe-area-inset-right, 0px)); }
+
+/* Район решает: the same battered noticeboard, with room for a whole chapter. */
+.expansion-shell .game-grid { align-items:start; min-height:0; }
+.expansion-shell .scene-card { display:flex; min-height:0; flex-direction:column; }
+.expansion-shell .shop-card { min-height:0; }
+.expansion-shell .character-stage { height:390px; min-height:390px; flex-shrink:0; }
+.expansion-shell .character-button { min-height:0; }
+.expansion-shell .scene-footer { margin-top:auto; }
+.expansion-shell .sound-button { min-height:44px; }
+.expansion-shell .shop-heading { gap:12px; }
+.expansion-shell .shop-heading>span { flex-shrink:0; }
+.expansion-shell .shop-heading h2 { overflow-wrap:anywhere; }
+.expansion-shell .upgrade-list { flex:none; }
+.expansion-shell .upgrade-card { min-height:146px; }
+.expansion-shell .roster-card small { color:#b3a482; }
+.expansion-shell .roster-card:disabled { filter:grayscale(1); color:#938875; }
+
+.district-map { position:relative; z-index:1; max-width:1540px; margin:22px auto 18px; }
+.chapter-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-bottom:10px; }
+.chapter-heading h2 { margin:0; color:#e9d293; font-size:clamp(1.35rem,2.6vw,2rem); line-height:1; text-transform:uppercase; letter-spacing:.02em; }
+.chapter-heading>span { color:#c5b385; font:700 .68rem/1.4 Arial,sans-serif; text-align:right; }
+.district-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.district-card { position:relative; min-width:0; min-height:190px; aspect-ratio:2.6; padding:0; overflow:hidden; border:2px solid #625237; background:#18130d; color:var(--cream); text-align:left; cursor:pointer; isolation:isolate; transition:border-color .18s ease,transform .18s ease; }
+.district-card img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:-2; transition:transform .35s ease,filter .25s ease; }
+.district-card::after { position:absolute; inset:0; z-index:-1; content:''; background:linear-gradient(180deg,rgba(6,5,3,.18),rgba(6,5,3,.08) 30%,rgba(6,5,3,.9) 85%,#070604); }
+.district-card.selected { border-color:#d1a844; box-shadow:0 0 0 1px #21180b,inset 0 -4px 0 #b73627; }
+.district-card:hover:not(:disabled) { border-color:#ddbc68; transform:translateY(-2px); }
+.district-card:hover:not(:disabled) img { transform:scale(1.035); }
+.district-card:disabled { cursor:default; }
+.district-card.locked img { filter:saturate(.25) brightness(.7); }
+.district-number { position:absolute; left:13px; top:10px; color:#f0d392; font-size:1.7rem; line-height:1; text-shadow:2px 2px 0 #1b110b; }
+.district-tag { position:absolute; right:10px; top:10px; padding:5px 7px; border:1px solid #8e7843; background:rgba(11,8,5,.84); color:#d4c192; font:800 .55rem/1.1 Arial,sans-serif; letter-spacing:.08em; }
+.selected .district-tag { border-color:#c79236; background:#78241d; color:#ffe3a0; }
+.district-card-copy { position:absolute; right:13px; bottom:15px; left:13px; display:flex; flex-direction:column; gap:7px; }
+.district-card-copy strong { font-size:clamp(1.15rem,2.2vw,1.85rem); line-height:.95; text-transform:uppercase; text-shadow:2px 3px 0 #0c0804; }
+.district-card-copy small { color:#decda4; font:700 .65rem/1.4 Arial,sans-serif; }
+.district-description { margin:10px 0 0; padding-left:11px; border-left:2px solid #8b6b31; color:#b4a380; font: .75rem/1.65 Georgia,serif; }
+.district-description strong { color:#e2cc90; }
+.district-description span { display:block; color:#d6b76c; font: .65rem/1.65 Arial,sans-serif; }
+.migration-note { max-width:1540px; margin:12px auto; padding:11px 14px; border:1px solid #68713e; background:#1d2415; color:#d6e0a4; font: .75rem/1.6 Arial,sans-serif; }
+.migration-note.warning { border-color:#956433; background:#332313; color:#f1d69b; }
+.kipish-jump { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; max-width:1540px; min-height:48px; margin:12px auto; padding:12px 16px; border:1px solid #b76335; background:#542018; color:#f4dc9e; text-align:left; font:800 .78rem/1.45 Arial,sans-serif; cursor:pointer; }
+.kipish-jump span { flex-shrink:0; color:#e5b654; font-size:.65rem; }
+
+.active-deal { position:relative; z-index:2; margin:14px 16px; padding:16px; border:1px solid #776038; background:linear-gradient(120deg,rgba(166,66,27,.12),transparent),#18130c; }
+.active-deal h3,.choice-event h3 { margin:3px 0 9px; color:#edce77; font-size:clamp(1.25rem,2vw,1.7rem); line-height:1.05; text-transform:uppercase; }
+.active-deal>p:not(.eyebrow):not(.subtle) { margin:8px 0 13px; color:#cab78c; font: .76rem/1.65 Georgia,serif; }
+.active-deal .crew-line { color:#e0cd9d; font-family:Arial,sans-serif; }
+.mission-progress-label { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:15px 0 7px; color:#b8a780; font: .66rem/1.5 Arial,sans-serif; }
+.mission-progress-label b { flex-shrink:0; color:#ecd186; }
+progress { display:block; width:100%; height:9px; overflow:hidden; border:1px solid #685330; border-radius:0; background:#0c0a06; accent-color:#cb9c39; }
+progress::-webkit-progress-bar { background:#0c0a06; }
+progress::-webkit-progress-value { background:repeating-linear-gradient(90deg,#9d6b28 0 9px,#c8a03e 9px 13px); }
+progress::-moz-progress-bar { background:repeating-linear-gradient(90deg,#9d6b28 0 9px,#c8a03e 9px 13px); }
+.deal-actions { display:flex; flex-wrap:wrap; align-items:center; gap:5px 12px; margin-top:13px; }
+.action-button { display:inline-flex; min-height:44px; align-items:center; justify-content:center; padding:11px 15px; border:1px solid #c79339; background:#70281d; color:#ffe3a0; text-align:center; font:800 .67rem/1.4 Arial,sans-serif; letter-spacing:.035em; cursor:pointer; transition:background .15s ease; }
+.action-button:hover:not(:disabled) { background:#963a27; }
+.action-button:disabled { border-color:#66512f; background:#292116; color:#aa9a77; cursor:not-allowed; }
+.text-button { min-height:44px; padding:8px 0; border:0; background:none; color:#d7b96e; text-decoration:underline; text-underline-offset:4px; text-align:left; font: .69rem/1.5 Arial,sans-serif; cursor:pointer; }
+.text-button:hover { color:#ffdf8e; }
+.subtle { margin:9px 0 13px; color:#baaa87; font: .67rem/1.6 Arial,sans-serif; }
+.heat-panel { margin:0 16px 16px; padding:12px 14px; border:1px solid #51462b; background:rgba(9,8,5,.8); }
+.heat-panel>div { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:9px; }
+.heat-panel strong { color:#ceb176; font-size:.85rem; letter-spacing:.07em; }
+.heat-panel span { color:#b2a17b; font:700 .63rem/1.5 Arial,sans-serif; text-align:right; }
+.heat-panel p { margin:9px 0 0; color:#a99a77; font: .64rem/1.6 Arial,sans-serif; }
+.heat-panel.hot { border-color:#ad5035; background:#29120e; }
+.heat-panel.hot strong,.heat-panel.hot span { color:#efac7f; }
+.heat-panel.hot progress { accent-color:#cd4e32; }
+.heat-panel.hot progress::-webkit-progress-value { background:#c14c33; }
+.heat-panel.hot progress::-moz-progress-bar { background:#c14c33; }
+.choice-event { position:relative; z-index:2; margin:0 16px 16px; padding:18px; border:3px double #c7943d; background:repeating-linear-gradient(-45deg,rgba(255,255,255,.015) 0 7px,transparent 7px 14px),#361810; scroll-margin-top:20px; }
+.choice-event>.eyebrow { color:#d9af68; }
+.choice-event>p:not(.eyebrow) { margin:11px 0 16px; color:#dec69e; font: .79rem/1.65 Georgia,serif; }
+.event-options { display:grid; gap:9px; }
+.event-options button { display:grid; gap:7px; min-width:0; min-height:100px; padding:12px; border:1px solid #6d713d; background:#222614; text-align:left; cursor:pointer; }
+.event-options button:hover:not(:disabled) { border-color:#bfbb76; background:#323820; }
+.event-options .bold-choice { border-color:#995132; background:#4b2117; }
+.event-options .bold-choice:hover:not(:disabled) { border-color:#dd9d60; background:#612c1d; }
+.event-options span { color:#d0b471; font:800 .57rem/1.4 Arial,sans-serif; letter-spacing:.08em; }
+.event-options strong { color:#f2dfb6; font:700 .79rem/1.5 Arial,sans-serif; }
+.event-options small { color:#cfbd8e; font: .68rem/1.5 Arial,sans-serif; }
+
+.district-workspace { scroll-margin-top:18px; }
+.expansion-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.expansion-tabs button { min-height:57px; padding:13px 8px; color:#b3a385; font-size:.83rem; letter-spacing:.025em; }
+.missions-content,.album-content { padding:19px; }
+.mission-intro { margin:10px 0 16px; color:#c0b18e; font: .73rem/1.65 Arial,sans-serif; }
+.crew-picker { display:grid; grid-template-columns:minmax(100px,.8fr) minmax(0,1.2fr); align-items:center; gap:12px; padding:13px 12px; border:1px dashed #75603a; background:#211a10; }
+.crew-picker>span,.crew-picker label { display:block; min-width:0; color:#c1ab80; font: .65rem/1.6 Arial,sans-serif; }
+.crew-picker>span strong { color:#e9d299; font: .95rem/1.35 Impact,'Arial Narrow',sans-serif; }
+.crew-picker select { display:block; width:100%; min-width:0; min-height:44px; margin-top:3px; padding:8px; border:1px solid #8a7143; border-radius:0; background:#0f0d09; color:#f0d8a1; font: .72rem/1.4 Arial,sans-serif; color-scheme:dark; }
+.crew-picker select:disabled { border-color:#51432a; color:#a59573; }
+.crew-picker select:focus-visible,.story-card summary:focus-visible { outline:3px solid var(--mustard); outline-offset:3px; }
+.mission-warning { margin:12px 0; padding:10px 12px; border-left:3px solid #ba5734; background:#351910; color:#edbc8c; font: .68rem/1.6 Arial,sans-serif; }
+.mission-list { display:grid; gap:12px; margin-top:18px; }
+.mission-card { position:relative; min-width:0; padding:16px; border:1px solid #645030; background:linear-gradient(145deg,rgba(113,70,29,.12),transparent 55%),#19140d; }
+.mission-card.in-progress { border-color:#c2943b; box-shadow:inset 3px 0 0 #b33523; }
+.mission-card.completed:not(.in-progress) { border-color:#596039; }
+.mission-topline { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; font:800 .56rem/1.4 Arial,sans-serif; letter-spacing:.08em; }
+.mission-topline>span { color:#bca56f; }
+.mission-topline b { color:#cb9867; text-align:right; }
+.completed .mission-topline b { color:#b3be7d; }
+.in-progress .mission-topline b { color:#e3be61; }
+.mission-card h3 { margin:0 0 10px; color:#ead59c; font-size:1.3rem; line-height:1.05; text-transform:uppercase; }
+.mission-card>p { margin:0 0 12px; color:#bfaf89; font: .72rem/1.65 Georgia,serif; }
+.mission-goal { padding:9px 10px; border-left:2px solid #766033; background:#100e09; color:#c5b68b; font: .66rem/1.5 Arial,sans-serif; }
+.mission-goal strong { color:#f0d28a; }
+.specialist { display:flex; align-items:center; gap:8px; margin-top:10px; color:#ae9b73; font: .63rem/1.5 Arial,sans-serif; }
+.specialist img { flex-shrink:0; width:31px; height:36px; border:1px solid #655033; background:#2d2012; object-fit:cover; object-position:center 13%; }
+.specialist strong { color:#ddc48d; }
+.mission-bottom { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-top:13px; padding-top:12px; border-top:1px dashed #564529; }
+.mission-bottom>div { display:grid; gap:4px; }
+.mission-bottom>div>strong { color:#dfb74e; font-size:1.5rem; line-height:1; }
+.mission-bottom small { color:#b0a07a; font: .59rem/1.4 Arial,sans-serif; }
+.mission-bottom .action-button { flex-shrink:0; }
+.chapter-complete { margin-top:17px; padding:18px; border:3px double #b79a49; background:#262817; }
+.chapter-complete strong { display:block; color:#e0c770; font-size:1.8rem; }
+.chapter-complete p { margin:7px 0 0; color:#c3c09b; font: .73rem/1.65 Georgia,serif; }
+
+.story-list { display:grid; gap:15px; }
+.story-card { padding:16px; border:1px solid #685433; background:linear-gradient(140deg,rgba(128,76,31,.1),transparent),#1c160f; }
+.story-card.revealed { border-color:#ad8a42; background:linear-gradient(140deg,rgba(152,83,29,.12),transparent),#20180e; }
+.story-card header { display:flex; align-items:center; gap:13px; }
+.story-card header img { flex-shrink:0; width:72px; height:92px; object-fit:cover; object-position:center 17%; border:2px solid #ac8b4e; background:radial-gradient(ellipse at center,#61432a,#1d140c); transform:rotate(-3deg); box-shadow:3px 4px 0 #0c0906; }
+.story-card header>div { min-width:0; }
+.story-card header span { color:#bdae89; font:800 .61rem/1.5 Arial,sans-serif; text-transform:uppercase; letter-spacing:.03em; }
+.story-card h3 { margin:5px 0 7px; color:#ecd7a4; font-size:1.25rem; line-height:1.05; }
+.story-card header small { color:#cbac64; font: .62rem/1.5 Arial,sans-serif; }
+.story-card>p,.story-card details p { margin:14px 0; color:#c3b28e; font: .76rem/1.75 Georgia,serif; }
+.story-card details { border-top:1px dashed #64502e; margin-top:14px; }
+.story-card summary { min-height:44px; padding:13px 0; color:#e2bc6d; font:800 .63rem/1.5 Arial,sans-serif; cursor:pointer; }
+.story-card details p:first-of-type { margin-top:3px; }
+.story-card details .story-locked { color:#b1a37d; font: .68rem/1.65 Arial,sans-serif; }
+.story-card blockquote { margin:13px 0 17px; padding:11px 14px; border-left:3px solid #a96537; background:#2b1d11; color:#e2c58c; font:italic .85rem/1.65 Georgia,serif; }
+.story-card>.action-button { width:100%; margin-top:5px; }
+.album-stats { display:grid; gap:10px; margin:20px 0 0; padding:14px 0 0; border-top:1px solid #64522d; }
+.album-stats span { display:flex; justify-content:space-between; gap:12px; color:#b7a581; font: .7rem/1.4 Arial,sans-serif; }
+.album-stats strong { color:#e2c87e; }
+.district-journal { padding:18px 20px; border-top:2px solid #524227; background:#100d09; }
+.district-journal>.eyebrow { margin-bottom:12px; }
+.district-journal>p:not(.eyebrow) { margin:0; color:#b7a783; font: .71rem/1.65 Georgia,serif; }
+.district-journal article+article { margin-top:12px; padding-top:12px; border-top:1px dashed #483c28; }
+.district-journal article strong { color:#d9c38f; font:700 .69rem/1.5 Arial,sans-serif; }
+.district-journal article p { margin:5px 0 6px; color:#b4a07b; font: .71rem/1.65 Georgia,serif; }
+.district-journal article small { color:#bcc580; font:700 .63rem/1.4 Arial,sans-serif; }
+
+@media(min-width:1400px) {
+  .expansion-shell .scene-card { position:sticky; top:16px; }
+  .expansion-shell .character-stage { height:435px; min-height:435px; }
+}
+@media(max-width:1100px) {
+  .district-card { min-height:174px; }
+  .district-card-copy strong { font-size:1.35rem; }
+  .district-card-copy small { font-size:.61rem; }
+  .expansion-shell .character-stage { height:365px; min-height:365px; }
+  .expansion-shell .character-button { width:93%; }
+  .missions-content,.album-content { padding:15px; }
+  .expansion-shell .upgrade-card { min-height:116px; }
+}
+@media(max-width:820px) {
+  .district-map { margin-top:18px; }
+  .district-cards { gap:8px; }
+  .district-tag { right:7px; padding:4px; font-size:.47rem; }
+  .district-card-copy { right:10px; left:10px; }
+  .district-card-copy strong { font-size:1.15rem; }
+  .expansion-shell .character-stage { height:410px; min-height:410px; }
+  .expansion-shell .character-button { width:88%; }
+  .expansion-shell .game-grid { gap:20px; }
+  .expansion-tabs button { font-size:.89rem; }
+  .missions-content,.album-content { padding:18px; }
+  .mission-card { padding:18px; }
+  .mission-card h3 { font-size:1.4rem; }
+  .expansion-shell .upgrade-card { min-height:137px; }
+}
+@media(max-width:560px) {
+  .chapter-heading { align-items:center; }
+  .chapter-heading h2 { font-size:1.35rem; }
+  .chapter-heading>span { max-width:100px; font-size:.6rem; }
+  .district-cards { grid-template-columns:repeat(3,minmax(185px,1fr)); gap:9px; overflow-x:auto; padding:3px 3px 10px; margin:0 -3px; scroll-snap-type:x proximity; scrollbar-color:#9d793c #17130c; scrollbar-width:thin; }
+  .district-card { min-height:166px; aspect-ratio:auto; scroll-snap-align:start; }
+  .district-card-copy strong { font-size:1.3rem; }
+  .district-tag { font-size:.49rem; }
+  .district-description { font-size:.71rem; }
+  .expansion-shell .character-stage { height:365px; min-height:365px; }
+  .expansion-shell .character-button { width:96%; }
+  .expansion-shell .character-title { max-width:46%; }
+  .expansion-shell .character-title strong { font-size:1.5rem; }
+  .expansion-shell .scene-footer { padding:11px 15px; }
+  .active-deal { margin:11px 10px; padding:13px; }
+  .active-deal>.eyebrow { font-size:.57rem; }
+  .heat-panel { margin:0 10px 12px; padding:11px 12px; }
+  .heat-panel span { font-size:.6rem; }
+  .choice-event { margin:0 10px 13px; padding:13px; }
+  .choice-event>.eyebrow { font-size:.6rem; }
+  .kipish-jump { padding:11px; font-size:.68rem; }
+  .kipish-jump span { font-size:.58rem; }
+  .expansion-tabs button { padding:12px 5px; font-size:.78rem; }
+  .missions-content,.album-content,.expansion-shell .shop-content { padding:13px; }
+  .expansion-shell .shop-heading h2 { font-size:1.8rem; }
+  .mission-card { padding:13px; }
+  .mission-card h3 { font-size:1.25rem; }
+  .mission-bottom { gap:10px 6px; }
+  .mission-bottom .action-button { padding:10px; font-size:.6rem; }
+  .mission-bottom small { max-width:135px; }
+  .crew-picker { grid-template-columns:minmax(80px,.75fr) minmax(0,1.25fr); gap:8px; padding:10px; }
+  .crew-picker>span strong { font-size:.88rem; }
+  .story-card { padding:13px; }
+  .story-card header { gap:11px; }
+  .story-card header img { width:61px; height:80px; }
+  .story-card h3 { font-size:1.15rem; }
+  .district-journal { padding:16px; }
+  .expansion-shell .upgrade-card { min-height:118px; }
+}
 
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }

@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import type { CSSProperties } from 'react';
-import Script from 'next/script';
 import { assetPath } from './asset-path';
 import './globals.css';
 
@@ -9,11 +8,11 @@ const socialImageUrl = new URL('og.png', siteUrl).href;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'Кумовья — семейно-экономический кликкер',
-  description: 'Нажимай на кума Валеру, копи авторитет и строй империю сомнительных связей.',
+  title: 'Кумовья — район решает',
+  description: 'Три района, десять мутных дел и пятеро своих. Дави на связи, собирай команду и разруливай кипиш в кликкере с чёрным юмором.',
   icons: { icon: assetPath('game/kum-valera.png') },
   openGraph: {
-    title: 'Кумовья — семейно-экономический кликкер',
+    title: 'Кумовья — район решает',
     description: 'Семья — это святое. Особенно когда всё записано на неё.',
     url: siteUrl,
     siteName: 'Кумовья',
@@ -23,7 +22,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Кумовья — семейно-экономический кликкер',
+    title: 'Кумовья — район решает',
     description: 'Семья — это святое. Особенно когда всё записано на неё.',
     images: [socialImageUrl],
   },
@@ -42,8 +41,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     '--upgrades-image': `url("${assetPath('game/upgrades.png')}")`,
   } as CSSProperties;
   return (
-    <html lang="ru">
-      <head><Script src="https://telegram.org/js/telegram-web-app.js?63" strategy="beforeInteractive" /></head>
+    <html lang="ru" suppressHydrationWarning>
+      <head><script defer src="https://telegram.org/js/telegram-web-app.js?63" /></head>
       <body style={artworkStyle}>{children}</body>
     </html>
   );

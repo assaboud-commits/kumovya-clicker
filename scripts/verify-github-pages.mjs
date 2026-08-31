@@ -11,15 +11,19 @@ const html = readFileSync(path.join(output, 'index.html'), 'utf8');
 assert.match(html, /Кумовья/);
 assert.match(html, /Гопон Миша/);
 assert.match(html, /Авторитет на корточках/);
+assert.match(html, /Территория своих/);
+assert.match(html, /Мутные дела/);
+assert.match(html, /Семейный альбом/);
 assert.ok(html.includes(`${prefix}/game/gopon-misha.png`), 'Misha must be present in the exported roster.');
 assert.ok(!/Кум Гоша|Гаражный экономист|kum-gosha\.png/.test(html), 'The retired accountant must not remain in the game.');
 assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);
 assert.match(html, /https:\/\/assaboud-commits\.github\.io\/kumovya-clicker\/og\.png/);
 assert.ok(!html.includes('chatgpt.site'), 'Old hosting URL must not remain in the export.');
-assert.ok(!/(?:src|href)=["']\/(?:game|_next)\//.test(html), 'A static asset is missing the repository prefix.');
+assert.ok(!/(?:src|href)=["']\/(?:game|districts|_next)\//.test(html), 'A static asset is missing the repository prefix.');
 assert.ok(statSync(path.join(output, '.nojekyll')).isFile());
 
 const artwork = readdirSync(path.join(source, 'game')).map((name) => `game/${name}`);
+artwork.push(...readdirSync(path.join(source, 'districts')).map((name) => `districts/${name}`));
 artwork.push('og.png');
 for (const relative of artwork) {
   assert.deepEqual(readFileSync(path.join(output, relative)), readFileSync(path.join(source, relative)), `${relative}: exported bytes must match the original asset.`);

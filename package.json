@@ -10,6 +10,7 @@
     "build": "vinext build",
     "build:github": "node scripts/build-github-pages.mjs",
     "verify:github": "node scripts/verify-github-pages.mjs",
+    "test": "node --test scripts/test-game.mjs",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
