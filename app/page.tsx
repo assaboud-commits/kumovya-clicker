@@ -2,6 +2,7 @@
 
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { initializeTelegram } from './telegram';
+import { assetPath } from './asset-path';
 
 type Upgrade = {
   id: string;
@@ -60,7 +61,7 @@ const characters = [
     name: 'Кум Валера',
     role: 'Решала у мангала',
     perk: 'Любой тычок даёт на 25% больше авторитета.',
-    image: '/game/kum-valera.png',
+    image: assetPath('game/kum-valera.png'),
     unlockAt: 0,
     clickMultiplier: 1.25,
     passiveMultiplier: 1,
@@ -73,7 +74,7 @@ const characters = [
     name: 'Кума Виктория',
     role: 'Тамада судного дня',
     perk: 'Каждый 12-й тычок превращается в тост x8.',
-    image: '/game/kuma-viktoria.png',
+    image: assetPath('game/kuma-viktoria.png'),
     unlockAt: 150,
     clickMultiplier: 1,
     passiveMultiplier: 1,
@@ -86,7 +87,7 @@ const characters = [
     name: 'Тётя Сара',
     role: 'Админ семейного чата',
     perk: 'Пассивный доход +45%, а мутные события случаются чаще.',
-    image: '/game/tetya-sara.png',
+    image: assetPath('game/tetya-sara.png'),
     unlockAt: 600,
     clickMultiplier: 1,
     passiveMultiplier: 1.45,
@@ -99,7 +100,7 @@ const characters = [
     name: 'Кум Гоша',
     role: 'Гаражный экономист',
     perk: 'Все покупки в мутном ларьке на 20% дешевле.',
-    image: '/game/kum-gosha.png',
+    image: assetPath('game/kum-gosha.png'),
     unlockAt: 2200,
     clickMultiplier: 1,
     passiveMultiplier: 1,
@@ -112,7 +113,7 @@ const characters = [
     name: 'Тётя Зина',
     role: 'Нотариус последней надежды',
     perk: 'Любая сомнительная удача приносит в 2,5 раза больше.',
-    image: '/game/tetya-zina.png',
+    image: assetPath('game/tetya-zina.png'),
     unlockAt: 9000,
     clickMultiplier: 1,
     passiveMultiplier: 1,

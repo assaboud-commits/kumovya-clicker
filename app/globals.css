@@ -40,7 +40,7 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 3px; }
   isolation: isolate;
   background:
     linear-gradient(90deg, rgba(5,4,3,.94), rgba(20,12,8,.62) 45%, rgba(5,4,3,.92)),
-    url('/game/background.png') center / cover fixed;
+    var(--scene-background) center / cover fixed;
 }
 
 .game-shell::before {
@@ -414,7 +414,7 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 3px; }
 }
 .upgrade-card:hover:not(:disabled) { z-index:1; border-color:#d09b32; background:linear-gradient(135deg,rgba(139,42,29,.31),transparent 64%),#24190f; transform:translateY(-2px) rotate(-.3deg); }
 .upgrade-card:disabled { cursor:not-allowed; filter:grayscale(.65) brightness(.63); }
-.upgrade-icon { width:70px; height:70px; border:1px solid #6a592e; background-image:url('/game/upgrades.png'); background-repeat:no-repeat; background-size:200% 300%; box-shadow:3px 3px 0 #070605; }
+.upgrade-icon { width:70px; height:70px; border:1px solid #6a592e; background-image:var(--upgrades-image); background-repeat:no-repeat; background-size:200% 300%; box-shadow:3px 3px 0 #070605; }
 .upgrade-copy { display:flex; min-width:0; flex-direction:column; }
 .upgrade-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:5px; }
 .upgrade-title-row strong { color:#ead491; font-size:clamp(.84rem,1.3vw,1.03rem); line-height:.95; text-transform:uppercase; }
