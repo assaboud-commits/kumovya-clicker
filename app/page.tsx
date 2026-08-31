@@ -44,6 +44,8 @@ const events = [
   ['Кум продал соседу воздух с дачи', 120],
   ['Кто-то сказал «по одной — и домой»', 88],
   ['Тост без подготовки длился сорок минут', 45],
+  ['Миша спросил цену. Ценник сам упал на 20%', 66],
+  ['Миша присел на корточки. Собрание стало внеочередным', 88],
 ] as const;
 
 const ranks = [
@@ -96,11 +98,11 @@ const characters = [
     eventChance: .22,
   },
   {
-    id: 'gosha',
-    name: 'Кум Гоша',
-    role: 'Гаражный экономист',
-    perk: 'Все покупки в мутном ларьке на 20% дешевле.',
-    image: assetPath('game/kum-gosha.png'),
+    id: 'misha',
+    name: 'Гопон Миша',
+    role: 'Авторитет на корточках',
+    perk: '«Ты меня уважаешь?» — и все улучшения на 20% дешевле.',
+    image: assetPath('game/gopon-misha.png'),
     unlockAt: 2200,
     clickMultiplier: 1,
     passiveMultiplier: 1,
@@ -362,7 +364,9 @@ export default function Home() {
                 <div><dt>Доход без участия</dt><dd>{formatNumber(passive)}/сек</dd></div>
                 <div><dt>Дежурный персонаж</dt><dd>{activeCharacter.name}</dd></div>
               </dl>
-              <blockquote>«Я ничего не решаю. Я просто знаю человека, который знает человека, который уже уехал».</blockquote>
+              <blockquote>{activeCharacter.id === 'misha'
+                ? '«Я не торгуюсь. Я даю ценнику шанс одуматься».'
+                : '«Я ничего не решаю. Я просто знаю человека, который знает человека, который уже уехал».'}</blockquote>
               <div className="fingerprint" aria-hidden="true">КУМ</div>
             </div>
           )}

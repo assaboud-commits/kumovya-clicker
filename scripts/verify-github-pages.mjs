@@ -9,6 +9,10 @@ const prefix = '/kumovya-clicker';
 const html = readFileSync(path.join(output, 'index.html'), 'utf8');
 
 assert.match(html, /Кумовья/);
+assert.match(html, /Гопон Миша/);
+assert.match(html, /Авторитет на корточках/);
+assert.ok(html.includes(`${prefix}/game/gopon-misha.png`), 'Misha must be present in the exported roster.');
+assert.ok(!/Кум Гоша|Гаражный экономист|kum-gosha\.png/.test(html), 'The retired accountant must not remain in the game.');
 assert.match(html, /telegram\.org\/js\/telegram-web-app\.js/);
 assert.match(html, /https:\/\/assaboud-commits\.github\.io\/kumovya-clicker\/og\.png/);
 assert.ok(!html.includes('chatgpt.site'), 'Old hosting URL must not remain in the export.');
@@ -21,6 +25,8 @@ for (const relative of artwork) {
   assert.deepEqual(readFileSync(path.join(output, relative)), readFileSync(path.join(source, relative)), `${relative}: exported bytes must match the original asset.`);
   assert.ok(html.includes(`${prefix}/${relative}`), `${relative}: prefixed URL must appear in the HTML.`);
 }
+
+assert.deepEqual(readFileSync(path.join(output, 'bot-avatar.png')), readFileSync(path.join(source, 'bot-avatar.png')), 'The downloadable bot avatar must be included unchanged.');
 
 const referencedAssets = [...html.matchAll(/(?:src|href)=["'](\/kumovya-clicker\/[^"']+)["']/g)];
 for (const [, url] of referencedAssets) {
